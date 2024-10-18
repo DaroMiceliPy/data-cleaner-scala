@@ -5,4 +5,4 @@ in production.
 There are two process in scala that consists:
 
 - Cleaning phone numbers from database (based on wrong numbers)
-- Adding new phone numbers and users o database
+- Adding new phone numbers and users to database
