@@ -1,6 +1,8 @@
 package de.datacleaner.spark
 
+import de.datacleaner.spark.models.telefonosErroneos
 import de.datacleaner.spark.utils.pivoting.pivotingDF
+import de.datacleaner.spark.models.baseClientes
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions.{col, concat, isnan, isnull, lit, max, row_number, when}
@@ -14,22 +16,30 @@ object cleaningData {
       .getOrCreate()
 
 
-    val baseClientes: DataFrame = spark.read
+    val baseClientesDf: DataFrame = spark.read
       .option("header", value = true)
       .option("delimiter", value = ";")
       .csv("data/Base_clientes.csv")
 
-    val telefonosErroneos: DataFrame = spark.read
+    baseClientesDf.printSchema();
+
+    val validateBaseClientes = new baseClientes(baseClientesDf)
+    validateBaseClientes.validateColumns()
+
+    val telefonosErroneosDf: DataFrame = spark.read
       .option("header", value = true)
       .option("delimiter", value = ";")
       .csv("data/Telefonos_erroneos.csv")
 
-    val telefonosErroneos_v2 = telefonosErroneos.select(
+    val validateTelefonosErroneos = new telefonosErroneos(telefonosErroneosDf)
+    validateTelefonosErroneos.validateColumns()
+
+    val telefonosErroneos_v2 = telefonosErroneosDf.select(
       col("Telefonos").as("telefonos"),
       lit("_both").as("_merge"))
 
     val baseMelt: DataFrame =
-      baseClientes.melt(ids = Array(col("NrodeDoc")),
+      baseClientesDf.melt(ids = Array(col("NrodeDoc")),
         variableColumnName = "typePhone", 
         valueColumnName = "telefonos")
 
@@ -39,7 +49,7 @@ object cleaningData {
       .select("NrodeDoc", "typePhone", "telefonos")
     
 
-    val dnisDosentExists = baseClientes
+    val dnisDosentExists = baseClientesDf
       .filter(!(col("NrodeDoc").isin(merge.col("NrodeDoc"))))
       .withColumn("typePhone", lit("NULL"))
       .withColumn("telefonos", lit("NULL"))

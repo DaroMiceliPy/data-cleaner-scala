@@ -2,6 +2,8 @@ package de.datacleaner.spark
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.expressions.Window
+import de.datacleaner.spark.models.baseClientes
+import de.datacleaner.spark.models.agregarBase
 import org.apache.spark.sql.functions.{col, concat, lit, max, row_number, when}
 import utils.pivoting.pivotingDF
 
@@ -17,17 +19,24 @@ case object addingData {
       .option("header", value = true)
       .option("delimiter", value = ";")
       .csv("data/Agregar_base.csv")
-      .select(col("NrodeDoc"), col("Telefonos").as("telefonos"))
+      .select(col("NrodeDoc"), col("Telefonos"))
+    
+    val validateAgregarBase = new agregarBase(addingData)
+    validateAgregarBase.validateColumns()
+    
 
-    val baseClientes = spark.read
+    val baseClientesDf = spark.read
       .option("header", value = true)
       .option("delimiter", value = ";")
       .csv("data/Base_clientes.csv")
+    
+    val validateBaseClientes = new baseClientes(baseClientesDf)
+    validateBaseClientes.validateColumns()
 
-    val baseMelt = baseClientes.melt(Array(col("NrodeDoc")),
+    val baseMelt = baseClientesDf.melt(Array(col("NrodeDoc")),
       variableColumnName = "typePhone_v2",
-      valueColumnName = "telefonos")
-      .select("NrodeDoc", "telefonos")
+      valueColumnName = "Telefonos")
+      .select(col("NrodeDoc"), col("Telefonos").as("telefonos"))
 
     val concatDf = baseMelt.union(addingData)
       .withColumn("rank", row_number().over(Window.partitionBy("NrodeDoc").orderBy(col("telefonos").desc)))

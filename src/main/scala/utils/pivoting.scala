@@ -7,7 +7,6 @@ import org.apache.spark.sql.functions.{col, max, when}
 case object pivoting {
 
   def pivotingDF(df: DataFrame): DataFrame = {
-    validateColumns.validateColumns(df.columns)
     
     val pivoting: DataFrame = df
       .withColumn("Telefono_1", when(col("typePhone_v2") === "Telefono 1", col("telefonos")))
